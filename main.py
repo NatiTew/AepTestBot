@@ -1,9 +1,72 @@
+import requests
+import json
 import discord
 import os
 import pymongo
 import pymongo.errors
+from os import system
+from keepAlive import keep_alive
+from datetime import datetime
+from time import sleep
+from discord.ext import commands
 from pymongo import MongoClient
 from discord.ext.commands import has_permissions, MissingPermissions
+
+def list_Huu(wallet:str):
+  url = "https://api-v2-mainnet.paras.id/token/"
+
+  querystring = {"collection_id":"peoplehuuyaowknow-by-huuyaownear","__limit":"100","owner_id":wallet}
+  
+  payload = ""
+  response = requests.request("GET", url, data=payload, params=querystring)
+  arr = response.json()
+  
+  # jtest = json.dumps(arr, indent=4)
+  
+  loopCount = arr["data"]["results"]
+
+  text = ""
+  for i in loopCount:
+    text = text + i["metadata"]["title"] + "\n" 
+  
+  # arr1 = arr["data"]["results"][0]["metadata"]["title"]
+  # arr2 = arr["data"]["count"]
+  # arr2 = arr1["results"]
+  
+  # print(arr2[0]["metadata"]["title"])
+  return text
+
+def list_douby(wallet:str):
+  url = "https://api-v2-mainnet.paras.id/token/"
+
+  querystring = {"collection_id":"doubutzu-style-by-feraniznear","__limit":"100","owner_id":wallet}
+  
+  payload = ""
+  response = requests.request("GET", url, data=payload, params=querystring)
+  arr = response.json()
+  
+  # jtest = json.dumps(arr, indent=4)
+  
+  loopCount = arr["data"]["results"]
+
+  text = ""
+  for i in loopCount:
+    text = text + i["metadata"]["title"] + "\n" 
+  
+  # arr1 = arr["data"]["results"][0]["metadata"]["title"]
+  # arr2 = arr["data"]["count"]
+  # arr2 = arr1["results"]
+  
+  # print(arr2[0]["metadata"]["title"])
+  return text
+
+def updateLog(text:str):
+  now = datetime.now()
+  date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+  f = open("Log.txt", "a")
+  f.write(date_time + " | " + text + "\n")
+  f.close()
+
 
 server_ids = [952942108589834282]
 token = os.environ['token']
@@ -23,10 +86,31 @@ client = pymongo.MongoClient(f"mongodb+srv://{mongodb}:{password}@aepmong0.uc53n
 db = client.warns
 coll = db.serverwarns
 
-
 @bot.event
 async def on_ready():
+  updateLog('System Starting...')
+  print(f'Successfully logged in as {bot.user}')
   print("I am online")
+
+@bot.slash_command(guild_ids = server_ids, name="check_paras", description = "Check Your NFT Paras.")
+async def check_paras(ctx, wallet:discord.Option(str, description="Your Near Wallet ")):
+  listname = list_Huu(wallet)
+  embed = discord.Embed(
+   title= f"Your NFT in {wallet} :",
+   description= f"{listname}",
+   color = discord.Color.random()
+   )
+  await ctx.respond(embed=embed)
+
+@bot.slash_command(guild_ids = server_ids, name="check_douby", description = "Check Your NFT Paras.")
+async def check_douby(ctx, wallet:discord.Option(str, description="Your Near Wallet ")):
+  listname = list_douby(wallet)
+  embed = discord.Embed(
+   title= f"Your NFT in {wallet} :",
+   description= f"{listname}",
+   color = discord.Color.random()
+   )
+  await ctx.respond(embed=embed)
 
 @bot.slash_command(guild_ids = server_ids, name="warn", description = "Warn a user.")
 async def warn(ctx, user:discord.Option(discord.Member, description="What user do you want to warn?"), reason:discord.Option(str)):
@@ -90,8 +174,13 @@ async def removewarns(ctx, user:discord.Option(discord.Member), amount:int):
 async def test(ctx):
   await ctx.respond("The command works.")
 
-@bot.user_command(name="Say Hello")
-async def hi(ctx, user):
-    await ctx.respond(f"{ctx.author.mention} says hello to {user.name}!")
 
-bot.run(token)
+
+keep_alive()
+try:
+  bot.run(token)
+except discord.errors.HTTPException:
+  print("\n\n\nBLOCKED BY RATE LIMITS\nRESTARTING NOW\n\n\n")
+  log = 'BLOCKED BY RATE LIMITS'
+  updateLog(log)
+  system("python restarter.py")
